@@ -19,7 +19,7 @@
 #include "coin.h"
 #include "zxformat.h"
 
-#if defined(TARGET_NANOS) || defined(TARGET_NANOS2) || defined(TARGET_NANOX) || defined(TARGET_STAX)
+#if defined(TARGET_NANOS) || defined(TARGET_NANOS2) || defined(TARGET_NANOX) || defined(TARGET_STAX) || defined(TARGET_FLEX)
 #include "cx.h"
 #else
 #include "picohash.h"
@@ -29,21 +29,6 @@
 
 uint8_t bech32_hrp_len;
 char bech32_hrp[MAX_BECH32_HRP_LEN + 1];
-uint8_t flr_chain_code;
-
-__Z_INLINE zxerr_t keccak_hash(const unsigned char *in, unsigned int inLen, unsigned char *out, unsigned int outLen) {
-#if defined(TARGET_NANOS) || defined(TARGET_NANOS2) || defined(TARGET_NANOX) || defined(TARGET_STAX)
-    // return actual size using value from signatureLength
-    cx_sha3_t keccak;
-    if (cx_keccak_init_no_throw(&keccak, outLen * 8) != CX_OK) return zxerr_unknown;
-    CHECK_CX_OK(cx_hash_no_throw((cx_hash_t *)&keccak, CX_LAST, in, inLen, out, outLen));
-#endif
-    return zxerr_ok;
-}
-
-zxerr_t keccak_digest(const unsigned char *in, unsigned int inLen, unsigned char *out, unsigned int outLen) {
-    return keccak_hash(in, inLen, out, outLen);
-}
 
 zxerr_t crypto_sha256(const uint8_t *input, uint16_t inputLen, uint8_t *output, uint16_t outputLen) {
     if (input == NULL || output == NULL || outputLen < CX_SHA256_SIZE) {
@@ -52,7 +37,7 @@ zxerr_t crypto_sha256(const uint8_t *input, uint16_t inputLen, uint8_t *output, 
 
     MEMZERO(output, outputLen);
 
-#if defined(TARGET_NANOS) || defined(TARGET_NANOS2) || defined(TARGET_NANOX) || defined(TARGET_STAX)
+#if defined(TARGET_NANOS) || defined(TARGET_NANOS2) || defined(TARGET_NANOX) || defined(TARGET_STAX) || defined(TARGET_FLEX)
     cx_sha256_t ctx;
     memset(&ctx, 0, sizeof(ctx));
     cx_sha256_init_no_throw(&ctx);
@@ -67,7 +52,7 @@ zxerr_t crypto_sha256(const uint8_t *input, uint16_t inputLen, uint8_t *output, 
 }
 
 zxerr_t ripemd160_32(uint8_t *out, uint8_t *in) {
-#if defined(TARGET_NANOS) || defined(TARGET_NANOS2) || defined(TARGET_NANOX) || defined(TARGET_STAX)
+#if defined(TARGET_NANOS) || defined(TARGET_NANOS2) || defined(TARGET_NANOX) || defined(TARGET_STAX) || defined(TARGET_FLEX)
     cx_ripemd160_t rip160 = {0};
     cx_ripemd160_init(&rip160);
     CHECK_CX_OK(cx_hash_no_throw(&rip160.header, CX_LAST, in, CX_SHA256_SIZE, out, CX_RIPEMD160_SIZE));
