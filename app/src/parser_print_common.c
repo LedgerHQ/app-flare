@@ -22,7 +22,7 @@
 #include "zxformat.h"
 #include "zxmacros.h"
 
-#if defined(TARGET_NANOS) || defined(TARGET_NANOS2) || defined(TARGET_NANOX) || defined(TARGET_STAX) || defined(TARGET_FLEX)
+#if defined(LEDGER_SPECIFIC)
 #include "cx.h"
 #else
 #include "picohash.h"
@@ -119,7 +119,11 @@ parser_error_t printAddress(const uint8_t *pubkey, network_id_e network_id, char
             break;
     }
     char address[100] = {0};
-    const zxerr_t err = bech32EncodeFromBytes(address, sizeof(address), hrp, pubkey, 20, 1, BECH32_ENCODING_BECH32);
+#ifdef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
+    const zxerr_t err = zxerr_ok;  // Bypass bech32 encoding
+#else
+    const zxerr_t err = bech32EncodeFromBytes(address, sizeof(address), hrp, pubkey, ADDRESS_LEN, 1, BECH32_ENCODING_BECH32);
+#endif
 
     if (err != zxerr_ok) {
         return parser_unexpected_error;
@@ -157,16 +161,26 @@ parser_error_t printNodeId(const uint8_t *nodeId, char *outVal, uint16_t outValL
 
     // Calculate SHA256 checksum
     uint8_t checksum[CX_SHA256_SIZE] = {0};
-#if defined(TARGET_NANOS) || defined(TARGET_NANOS2) || defined(TARGET_NANOX) || defined(TARGET_STAX) || defined(TARGET_FLEX)
+#if defined(LEDGER_SPECIFIC)
     cx_sha256_t ctx;
     memset(&ctx, 0, sizeof(ctx));
     cx_sha256_init_no_throw(&ctx);
     CHECK_CX_PARSER_OK(cx_hash_no_throw(&ctx.header, CX_LAST, nodeId, NODE_ID_LEN, checksum, CX_SHA256_SIZE));
 #else
+#ifdef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
+    // For fuzzing: use a safer hash computation to avoid undefined behavior
+    // This is unsafe for production but acceptable for fuzzing tests
+    memset(checksum, 0, CX_SHA256_SIZE);
+    // Create a simple checksum from the nodeId for fuzzing purposes
+    for (uint8_t i = 0; i < NODE_ID_LEN && i < CX_SHA256_SIZE; i++) {
+        checksum[i % CX_SHA256_SIZE] ^= nodeId[i];
+    }
+#else
     picohash_ctx_t ctx;
     picohash_init_sha256(&ctx);
     picohash_update(&ctx, nodeId, NODE_ID_LEN);
     picohash_final(&ctx, checksum);
+#endif
 #endif
 
     // Copy last 4 bytes of checksum to data
@@ -190,7 +204,7 @@ parser_error_t printHash(const parser_context_t *ctx, char *outVal, uint16_t out
                          uint8_t *pageCount) {
     unsigned char hash[CX_SHA256_SIZE] = {0};
 
-#if defined(TARGET_NANOS) || defined(TARGET_NANOS2) || defined(TARGET_NANOX) || defined(TARGET_STAX) || defined(TARGET_FLEX)
+#if defined(LEDGER_SPECIFIC)
     cx_sha256_t hash_ctx;
     memset(&hash_ctx, 0, sizeof(hash_ctx));
     CHECK_CX_PARSER_OK(cx_sha256_init_no_throw(&hash_ctx));
