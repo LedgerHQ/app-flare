@@ -51,6 +51,55 @@ const char *parser_getErrorDescription(parser_error_t err) {
         case parser_display_page_out_of_range:
             return "display page out of range";
 
+        /* Generic errors */
+        case parser_unexpected_error:
+            return "Unexpected error";
+
+        /* Coin generic */
+        case parser_unexpected_type:
+            return "Unexpected type";
+        case parser_unexpected_method:
+            return "Unexpected method";
+        case parser_unexpected_value:
+            return "Unexpected value";
+        case parser_unexpected_number_items:
+            return "Unexpected number of items";
+        case parser_invalid_address:
+            return "Invalid address";
+        case parser_unknown_transaction:
+            return "Unknown transaction";
+
+        /* Utils specific */
+        case parser_unexpected_data_len:
+            return "Unexpected data length";
+        case parser_invalid_codec:
+            return "Invalid codec";
+        case parser_unexpected_network:
+            return "Unexpected network";
+        case parser_unexpected_type_id:
+            return "Unexpected type id";
+        case parser_unexpected_threshold:
+            return "Unexpected threshold";
+        case parser_unexpected_n_address_zero:
+            return "Unexpected n_address zero";
+        case parser_unexpected_unparsed_bytes:
+            return "Unexpected unparsed bytes";
+        case parser_invalid_time_stamp:
+            return "Invalid time stamp";
+        case parser_invalid_stake_amount:
+            return "Invalid stake amount";
+        case parser_unexpected_output_locked:
+            return "Unexpected output locked";
+        case parser_unsupported_tx:
+            return "Unsupported transaction";
+        case parser_blindsign_mode_required:
+            return "Blind sign mode required";
+
+        case parser_invalid_rs_values:
+            return "Invalid RS values";
+        case parser_invalid_chain_id:
+            return "Invalid chain id";
+
         default:
             return "Unrecognized error code";
     }
@@ -65,6 +114,9 @@ static parser_error_t parser_map_tx_type(parser_context_t *c, parser_tx_t *v) {
     CHECK_ERROR(read_u32(c, &raw_tx_type))
 
     switch (raw_tx_type) {
+        case BASE_TX:
+            v->tx_type = base_tx;
+            break;
         case P_CHAIN_EXPORT_TX:
             v->tx_type = p_export_tx;
             break;
@@ -77,11 +129,11 @@ static parser_error_t parser_map_tx_type(parser_context_t *c, parser_tx_t *v) {
         case C_CHAIN_IMPORT_TX:
             v->tx_type = c_import_tx;
             break;
-        case ADD_DELEGATOR_TX:
-            v->tx_type = add_delegator_tx;
+        case ADD_PERMISSIONLESS_DELEGATOR_TX:
+            v->tx_type = add_permissionless_delegator_tx;
             break;
-        case ADD_VALIDATOR_TX:
-            v->tx_type = add_validator_tx;
+        case ADD_PERMISSIONLESS_VALIDATOR_TX:
+            v->tx_type = add_permissionless_validator_tx;
             break;
         default:
             return parser_unknown_transaction;
@@ -157,6 +209,11 @@ parser_error_t getNumItems(const parser_context_t *ctx, uint8_t *numItems) {
     *numItems = 0;
     const uint8_t expertModeHashField = app_mode_expert() ? 1 : 0;
     switch (ctx->tx_obj->tx_type) {
+        case base_tx:
+            // Tx + fee + Amounts(= n_outs) + Addresses
+            *numItems = 2 + ctx->tx_obj->tx.base_tx.base_secp_outs.n_addrs + ctx->tx_obj->tx.base_tx.base_secp_outs.n_outs +
+                        expertModeHashField;
+            break;
         case p_export_tx:
             // Tx + fee + Amounts(= n_outs) + Addresses
             *numItems = 2 + ctx->tx_obj->tx.p_export_tx.secp_outs.n_addrs + ctx->tx_obj->tx.p_export_tx.secp_outs.n_outs +
@@ -176,10 +233,10 @@ parser_error_t getNumItems(const parser_context_t *ctx, uint8_t *numItems) {
             // Tx + fee + (amount + address) * n_outs
             *numItems = 2 + (2 * ctx->tx_obj->tx.c_import_tx.evm_outs.n_outs) + expertModeHashField;
             break;
-        case add_delegator_tx:
+        case add_permissionless_delegator_tx:
             *numItems = 6 + expertModeHashField;
             break;
-        case add_validator_tx:
+        case add_permissionless_validator_tx:
             *numItems = 7 + expertModeHashField;
             break;
         default:
