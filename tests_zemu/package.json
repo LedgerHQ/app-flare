@@ -22,9 +22,9 @@
     "glob": "^11.0.3"
   },
   "dependencies": {
-    "@ledgerhq/hw-transport-node-hid": "6.29.13",
+    "@ledgerhq/hw-transport-node-hid": "6.29.15",
     "@zondax/ledger-flare": "../js",
-    "@zondax/zemu": "^0.62.1"
+    "@zondax/zemu": "^0.65.0"
   },
   "devDependencies": {
     "@ethereumjs/common": "^10.0.0",
